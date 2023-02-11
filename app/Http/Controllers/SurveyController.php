@@ -13,6 +13,9 @@ use Illuminate\Validation\Rule;
 use App\Models\SurveyQuestion;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Arr;
+use App\Http\Requests\StoreSurveyAnswerRequest;
+use App\Models\SurveyAnswer;
+use App\Models\SurveyQuestionAnswer;
 
 // use App\Enums\QuestionTypeEnum;
 // use Illuminate\Validation\Rules\Enum;
@@ -78,6 +81,47 @@ class SurveyController extends Controller
         return new SurveyResource($survey);
     }
 
+    ///
+        /**
+     * Display the specified resource for quest.
+     *
+     * @param  \App\Models\Survey  $survey
+     * @return \Illuminate\Http\Response
+     */
+    public function showForGuest(Survey $survey)
+    {
+
+        return new SurveyResource($survey);
+    }
+
+    public function storeAnswer(StoreSurveyAnswerRequest $request, Survey $survey){
+        $validated = $request->validated();
+        // var_dump($validated, $survey);
+
+        $surveyAnswer = SurveyAnswer::create([
+            'survey_id' => $survey->id,
+            'start_date' => date('Y-m-d H:i:s'),
+            'end_date' => date('Y-m-d H:i:s'),
+        ]);
+
+        foreach ($validated['answers'] as $questionId => $answer) {
+            $question = SurveyQuestion::where(['id' => $questionId, 'survey_id' => $survey->id])->get();
+            if (!$question) {
+                return response("Invalid question ID: \"$questionId\"", 400);
+            }
+
+            $data = [
+                'survey_question_id' => $questionId,
+                'survey_answer_id' => $surveyAnswer->id,
+                'answer' => is_array($answer) ? json_encode($answer) : $answer
+            ];
+
+            $questionAnswer = SurveyQuestionAnswer::create($data);
+
+        }
+
+        return response("", 201);
+    }
     /**
      * Update the specified resource in storage.
      *
@@ -94,6 +138,9 @@ class SurveyController extends Controller
         if($survey->image && isset($data['image']) ){
             $absolutePath = public_path($survey->image);
             File::delete($absolutePath);
+            //insert new image
+            $relativePath = $this->saveImage($data['image']);
+            $data['image'] = $relativePath;
         }
         //if there is only an old image, re-upload to database
         elseif($survey->image){
@@ -102,8 +149,9 @@ class SurveyController extends Controller
         }
         //else it is only a new image
         //check if new image was given and save on local file system
-        elseif(isset($data['image'])){
+        elseif(isset($data['image']) && !$survey->image){
 
+            //insert new image
             $relativePath = $this->saveImage($data['image']);
             $data['image'] = $relativePath;
 

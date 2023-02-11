@@ -4,6 +4,8 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\URL;
+use Nette\Utils\DateTime;
+
 
 class SurveyResource extends JsonResource
 {
@@ -22,9 +24,9 @@ class SurveyResource extends JsonResource
             'slug'          => $this->slug,
             'status'        => $this->status !== 'draft',
             'description'   => $this->description,
-            'created_at'    => $this->created_at,
-            'updated_at'    => $this->updated_at,
-            'expire_date'   => $this->expire_date,
+            'created_at'    => (new DateTime($this->created_at))->format('Y-m-d H:m:s'),
+            'updated_at'    => (new DateTime($this->updated_at))->format('Y-m-d H:m:s'),
+            'expire_date'   => (new DateTime($this->expire_date))->format('Y-m-d H:m:s'),
             'questions'     => SurveyQuestionResource::collection($this->surveyQuestions)
 
         ];
